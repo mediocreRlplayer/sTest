@@ -7,8 +7,7 @@ import axios from "axios";
 
 // importing helpers / fonts
 import { convertToE164 } from "@/utils/helpers";
-import { titleFont } from "@/utils/fonts";
-
+import { titleFont } from "../../utils/fonts";
 // importing crossmint
 import {
   CrossmintPaymentElement,
