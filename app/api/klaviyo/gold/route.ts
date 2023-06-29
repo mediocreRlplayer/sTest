@@ -5,6 +5,8 @@ const publicKey = process.env.NEXT_PUBLIC_KLAVIYO_PUBLIC_KEY as string;
 export async function POST(req: Request) {
   const res = await req.json();
 
+  console.log(res.data.attributes);
+
   try {
     const createProfileResponse = await fetch(
       "https://a.klaviyo.com/api/profiles/",
@@ -25,6 +27,7 @@ export async function POST(req: Request) {
                   type: res.data.type,
                   attributes: {
                     email: res.data.attributes.email,
+                    external_id: res.data.attributes.external_id,
                     properties: {
                       is_gold: res.data.attributes.properties.is_gold,
                       crossmintWalletAddress:
@@ -90,8 +93,6 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   const res = await req.json();
 
-  console.log(res);
-
   try {
     const updateProfileResponse = await fetch(
       `https://a.klaviyo.com/api/profiles/${res.id}`,
@@ -113,6 +114,7 @@ export async function PATCH(req: Request) {
                   id: res.data.data.id,
                   attributes: {
                     email: res.data.data.attributes.email,
+                    external_id: res.data.data.attributes.external_id,
                     properties: {
                       is_gold: res.data.data.attributes.properties.is_gold,
                       crossmintWalletAddress:

@@ -31,6 +31,8 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     // Extract the payload or data from the request
     const data = req.body;
-    console.log(data);
+    console.log(data.walletAddress);
+    res.status(200).json({ message: 'Webhook received successfully' });
+
   }
 }

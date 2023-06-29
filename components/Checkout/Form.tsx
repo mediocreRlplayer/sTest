@@ -7,7 +7,8 @@ import axios from "axios";
 
 // importing helpers / fonts
 import { convertToE164 } from "@/utils/helpers";
-import { titleFont } from "../../utils/fonts";
+import { titleFont } from "@/utils/fonts";
+
 // importing crossmint
 import {
   CrossmintPaymentElement,
@@ -23,7 +24,7 @@ export default function Form({ membership }: { membership: string }) {
   const [phonenumber, setPhonenumber] = useState<string>("");
   const [walletAddress, setWalletAddress] = useState<string>("");
   const [klaviyoProfileId, setKlaviyoProfileId] = useState<string>("");
-
+  const [enabledSMS, setEnabledSMS] = useState<boolean>(false);
   const [phoneError, setPhoneError] = useState(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [isEmailValid, setIsEmailValid] = useState<boolean>(false);
@@ -103,6 +104,9 @@ export default function Form({ membership }: { membership: string }) {
               break;
             case "transaction:fulfillment.succeeded":
               console.log("Minting succeeded", event);
+
+              // Adding the user to the correct member list
+              handleUserBoughtMembership();
               setStatus("mintingSucceeded");
               break;
             case "transaction:fulfillment.failed":
@@ -123,6 +127,7 @@ export default function Form({ membership }: { membership: string }) {
     e.preventDefault();
     setLoading(true);
 
+    let walletAddress = "";
     const crossObject = {
       email: email.toLowerCase(),
       chain: "polygon",
@@ -137,6 +142,7 @@ export default function Form({ membership }: { membership: string }) {
 
       if (response.status === 200) {
         setWalletAddress(response.data.publicKey);
+        walletAddress = response.data.publicKey;
       } else {
         console.log("Error creating wallet");
         setLoading(false);
@@ -148,26 +154,28 @@ export default function Form({ membership }: { membership: string }) {
 
     const smsChecked = e.target.sms.checked;
     const klaviyoEmailCheckUrl = "/api/klaviyo/findByEmail";
-    // once crimson is available change this to /api/klaviyo/crimson
     const klaviyoUrl =
-      membership === "gold" ? "/api/klaviyo/gold" : "/api/klaviyo/crimson-signup";
+      membership === "gold"
+        ? "/api/klaviyo/gold"
+        : "/api/klaviyo/crimson-signup"; // once crimson is available change this to /api/klaviyo/crimson
     const klaviyoFormData = {
       type: "profile",
       attributes: {
         email: email.toLowerCase(),
         phone_number: convertToE164(phonenumber),
+        external_id: walletAddress,
         properties:
           membership === "gold"
             ? {
-              is_gold: true,
-              crossmintWalletAddress: walletAddress,
-              signupDate: new Date().toISOString(),
-            }
+                is_gold: true,
+                crossmintWalletAddress: walletAddress,
+                signupDate: new Date().toISOString(),
+              }
             : {
-              is_crimson: true,
-              crossmintWalletAddress: walletAddress,
-              signupDate: new Date().toISOString(),
-            },
+                is_crimson: true,
+                crossmintWalletAddress: walletAddress,
+                signupDate: new Date().toISOString(),
+              },
       },
     };
 
@@ -188,7 +196,23 @@ export default function Form({ membership }: { membership: string }) {
             data: {
               type: "profile",
               id: klaviyoId,
-              attributes: klaviyoFormData.attributes,
+              attributes: {
+                email: email.toLowerCase(),
+                phone_number: phoneNumber,
+                external_id: walletAddress,
+                properties:
+                  membership === "gold"
+                    ? {
+                        is_gold: true,
+                        crossmintWalletAddress: walletAddress,
+                        signupDate: new Date().toISOString(),
+                      }
+                    : {
+                        is_crimson: true,
+                        crossmintWalletAddress: walletAddress,
+                        signupDate: new Date().toISOString(),
+                      },
+              },
             },
           },
           sms: smsChecked,
@@ -208,7 +232,9 @@ export default function Form({ membership }: { membership: string }) {
               );
 
               if (response.status === 200) {
-                setStatus("");
+                setStatus(
+                  membership === "gold" ? "crossmintCheckout" : "crimsonSignup"
+                );
                 setLoading(false);
               }
             } catch (error) {
@@ -225,7 +251,9 @@ export default function Form({ membership }: { membership: string }) {
             );
 
             if (response.status === 200) {
-              setStatus("");
+              setStatus(
+                membership === "gold" ? "crossmintCheckout" : "crimsonSignup"
+              );
               setLoading(false);
             }
           } catch (error) {
@@ -249,7 +277,9 @@ export default function Form({ membership }: { membership: string }) {
             });
 
             if (response.status === 200) {
-              setStatus("");
+              setStatus(
+                membership === "gold" ? "crossmintCheckout" : "crimsonSignup"
+              );
               setLoading(false);
               return;
             }
@@ -270,13 +300,16 @@ export default function Form({ membership }: { membership: string }) {
     setLoading(true);
 
     const klaviyoUrl =
-      membership === "gold" ? "/api/klaviyo/gold" : "/api/klaviyo/crimson";
+      membership === "gold"
+        ? "/api/klaviyo/gold"
+        : "/api/klaviyo/crimson-signup";
     const klaviyoFormData = {
       // Create new user in Klaviyo
       type: "profile",
       attributes: {
         email: email.toLowerCase(),
         phone_number: convertToE164(phonenumber),
+        external_id: walletAddress,
         properties:
           membership === "gold"
             ? {
@@ -298,7 +331,23 @@ export default function Form({ membership }: { membership: string }) {
         data: {
           type: "profile",
           id: klaviyoProfileId,
-          attributes: klaviyoFormData.attributes,
+          attributes: {
+            email: email.toLowerCase(),
+            phone_number: convertToE164(phonenumber),
+            external_id: walletAddress,
+            properties:
+              membership === "gold"
+                ? {
+                    is_gold: true,
+                    crossmintWalletAddress: walletAddress,
+                    signupDate: new Date().toISOString(),
+                  }
+                : {
+                    is_crimson: true,
+                    crossmintWalletAddress: walletAddress,
+                    signupDate: new Date().toISOString(),
+                  },
+          },
         },
       },
       sms: true, // This submit is handled after the user has already opted in to sms
@@ -310,7 +359,9 @@ export default function Form({ membership }: { membership: string }) {
         const response = await axios.patch(klaviyoUrl, klaviyoFormUpdateData);
 
         if (response.status === 200) {
-          setStatus("");
+          setStatus(
+            membership === "gold" ? "crossmintCheckout" : "crimsonSignup"
+          );
           setLoading(false);
         } else {
           console.log(response);
@@ -328,7 +379,9 @@ export default function Form({ membership }: { membership: string }) {
         });
 
         if (response.status === 200) {
-          setStatus("");
+          setStatus(
+            membership === "gold" ? "crossmintCheckout" : "crimsonSignup"
+          );
           setLoading(false);
         } else {
           console.log(response);
@@ -340,213 +393,302 @@ export default function Form({ membership }: { membership: string }) {
     }
   };
 
+  const handleUserBoughtMembership = async () => {
+    const klaviyoUrl =
+      membership === "gold"
+        ? "/api/klaviyo/gold/buyer"
+        : "/api/klaviyo/crimson/buyer";
+    const klaviyoFormUpdateData = {
+      // Update existing user in Klaviyo
+      id: klaviyoProfileId,
+      data: {
+        data: {
+          type: "profile",
+          id: klaviyoProfileId,
+          attributes: enabledSMS
+            ? {
+                email: email.toLowerCase(),
+                phone_number: convertToE164(phonenumber),
+                external_id: walletAddress,
+                properties:
+                  membership === "gold"
+                    ? {
+                        is_gold_buyer: true,
+                        crossmintWalletAddress: walletAddress,
+                        signupDate: new Date().toISOString(),
+                      }
+                    : {
+                        is_crimson_buyer: true,
+                        crossmintWalletAddress: walletAddress,
+                        signupDate: new Date().toISOString(),
+                      },
+              }
+            : {
+                email: email.toLowerCase(),
+                external_id: walletAddress,
+                properties:
+                  membership === "gold"
+                    ? {
+                        is_gold_buyer: true,
+                        crossmintWalletAddress: walletAddress,
+                        signupDate: new Date().toISOString(),
+                      }
+                    : {
+                        is_crimson_buyer: true,
+                        crossmintWalletAddress: walletAddress,
+                        signupDate: new Date().toISOString(),
+                      },
+              },
+        },
+      },
+      sms: enabledSMS, // This submit is handled after the user has already opted in to sms
+    };
+
+    try {
+      const response = await axios.patch(klaviyoUrl, klaviyoFormUpdateData);
+
+      if (response.status === 200) {
+        console.log("Bought membership");
+      } else {
+        console.log(response);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   return (
-    <div className="flex flex-col justify-center items-center h-full">
-      {status !== "emailCapture" && (
-        <button
-          className="m-5 px-3 py-1 bg-black hover:bg-black/80 border-2 border-black rounded text-white transition-colors duration-300 ease-in-out"
-          onClick={() => setStatus("emailCapture")}
-        >
-          Back
-        </button>
-      )}
-
-      {status === "emailCapture" ? ( // Email capture
-        <>
-          <form
-            onSubmit={handleSumbitEmail}
-            className="flex flex-col justify-center items-center gap-5"
+    <>
+      <div className="flex justify-center w-full">
+        {status !== "emailCapture" && (
+          <button
+            className="w-[300px] px-3 py-1 bg-black hover:bg-black/80 border-2 border-black rounded text-white transition-colors duration-300 ease-in-out"
+            onClick={() => setStatus("emailCapture")}
           >
-            <h1
-              className={`text-3xl font-bold text-center ${titleFont.className}`}
-            >
-              Ready to become a member?
-            </h1>
+            Back
+          </button>
+        )}
+      </div>
 
-            <h2>Enter your email to get started</h2>
+      <div className="flex flex-col justify-center items-center h-full">
+        {loading ? (
+          <div className="flex justify-center items-center w-full h-full">
+            <div className="flex flex-col justify-center items-center gap-5">
+              <h1 className="text-3xl font-bold text-center">Loading...</h1>
+              <h2>Do not close this window</h2>
 
-            <input
-              type="text"
-              placeholder="email@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-1 pl-3 border-2 border-black rounded"
-            />
-
-            <div className="flex justify-start w-full ml-2">
-              <input
-                style={{ transform: "scale(1.3)", marginRight: "1rem" }}
-                type="checkbox"
-                name="sms"
-                id="sms"
-              />
-              <label htmlFor="sms">Sign me up for SMS alerts</label>
+              <div className="animate-spin rounded-full h-[4rem] w-[4rem] border-t-2 border-b-2 border-gray-900"></div>
             </div>
+          </div>
+        ) : status === "crimsonSignup" ? (
+          <>
+            <div className="mx-auto">
+              <h1 className="text-3xl font-bold text-center">
+                Thanks for signing up!
+              </h1>
 
-            {(membership === "gold") ? (
+              <h2 className="text-center">
+                We'll contact you when the crimson pass drops
+              </h2>
+            </div>
+          </>
+        ) : status === "emailCapture" ? ( // Email capture
+          <>
+            <form
+              onSubmit={handleSumbitEmail}
+              className="flex flex-col justify-center items-center gap-5 min-h-[400px]"
+            >
+              <h1
+                className={`text-3xl font-bold text-center ${titleFont.className}`}
+              >
+                Ready to become a member?
+              </h1>
+
+              <h2>Enter your email to get started</h2>
+
+              <input
+                type="text"
+                placeholder="email@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-[300px] p-1 pl-3 border-2 border-black rounded"
+              />
+
+              <div className="flex justify-center w-full ml-2">
+                <input
+                  style={{ transform: "scale(1.3)", marginRight: "1rem" }}
+                  type="checkbox"
+                  name="sms"
+                  id="sms"
+                  onChange={(e) => setEnabledSMS(e.target.checked)}
+                />
+                <label htmlFor="sms">Sign me up for SMS alerts</label>
+              </div>
+
+              {membership === "gold" ? (
+                <button
+                  type="submit"
+                  className="w-[300px] p-1 bg-black hover:bg-black/80 disabled:bg-gray-300 border-2 border-black rounded text-white disabled:text-gray-500 transition-colors duration-300 ease-in-out"
+                >
+                  Continue
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className="w-[300px] p-1 bg-black hover:bg-black/80 disabled:bg-gray-300 border-2 border-black rounded text-white disabled:text-gray-500 transition-colors duration-300 ease-in-out"
+                >
+                  Sign Up
+                </button>
+              )}
+            </form>
+          </>
+        ) : status === "smsCapture" ? ( // Phone number capture
+          <>
+            <form
+              onSubmit={handleSumbitPhone}
+              className="flex flex-col justify-center items-center gap-5 min-h-[400px]"
+            >
+              <h1
+                className={`text-3xl font-bold text-center ${titleFont.className}`}
+              >
+                Help us connect!
+              </h1>
+
+              <h2>Enter your phone number to continue</h2>
+
+              <input
+                className="w-full p-1 border-2 border-black rounded"
+                type="text"
+                name="phone"
+                placeholder="555-555-5555"
+                value={phonenumber}
+                onChange={(e) => handlePhoneInputChange(e)}
+              />
+
+              <p className="text-[.8rem]">
+                {"* Must be a valid US Phone number"}
+              </p>
 
               <button
                 type="submit"
-                className="w-full p-1 bg-black hover:bg-black/80 disabled:bg-gray-300 border-2 border-black rounded text-white disabled:text-gray-500 transition-colors duration-300 ease-in-out"
+                disabled={phoneError}
+                className="w-[300px] p-1 bg-black hover:bg-black/80 disabled:bg-gray-300 border-2 border-black rounded text-white disabled:text-gray-500 transition-colors duration-300 ease-in-out"
               >
                 Continue
               </button>
+            </form>
+          </>
+        ) : status === "crossmintCheckout" ? (
+          <>
+            <div className="mx-auto">
+              <CrossmintPaymentElement
+                clientId={
+                  membership === "gold" ? goldClientId : crimsonClientId
+                }
+                environment="staging" // "production" | "staging"
+                recipient={{
+                  email: email,
+                  wallet: walletAddress,
+                }}
+                currency="USD"
+                locale="en-US"
+                uiConfig={{
+                  colors: {
+                    background: "#ffffff",
+                    backgroundSecondary: "#ffffff",
+                    backgroundTertiary: "#000000",
+                    textPrimary: "#000000",
+                    textSecondary: "#ffffff",
+                    accent: "#C6990B",
+                    danger: "#C63B0B",
+                    textLink: "#C6990B",
+                  },
+                  fontSizeBase: "1rem",
+                  spacingUnit: "0.25rem",
+                  borderRadius: "4px",
+                  fontWeightPrimary: "500",
+                  fontWeightSecondary: "500",
+                }}
+                mintConfig={{
+                  type: "erc-721",
+                  totalPrice: membership === "gold" ? "50" : "20",
+                  _quantity: 1,
+                }}
+                // @ts-ignore
+                onEvent={onEvent}
+              />
+            </div>
+          </>
+        ) : status === "paymentProcessing" ? (
+          <div className="flex justify-center items-center w-full h-full">
+            <div className="flex flex-col justify-center items-center gap-5 min-h-[400px]">
+              <h1 className="text-3xl font-bold text-center animate-pulse">
+                Processing your payment...
+              </h1>
 
-            ) : (
+              <h2 className="text-red-500 font-bold text-center">
+                Do not close this window, this can take a few minutes to
+                complete!
+              </h2>
 
-              <button
-                type="submit"
-                className="w-full p-1 bg-black hover:bg-black/80 disabled:bg-gray-300 border-2 border-black rounded text-white disabled:text-gray-500 transition-colors duration-300 ease-in-out"
+              <div className="animate-spin rounded-full h-[2rem] w-[2rem] border-t-2 border-b-2 border-gray-900" />
+            </div>
+          </div>
+        ) : status === "mintingStarted" || status === "mintingSucceeded" ? (
+          <div className="flex justify-center items-center w-full h-full">
+            <div className="flex flex-col justify-center items-center gap-5 min-h-[400px]">
+              <h1 className="text-3xl font-bold text-center">
+                Minting your membership...
+              </h1>
+
+              <h2 className="text-red-500 font-bold text-center">
+                Do not close this window, this can take a few minutes to
+                complete!
+              </h2>
+
+              <div className="animate-spin rounded-full h-[2rem] w-[2rem] border-t-2 border-b-2 border-gray-900" />
+            </div>
+          </div>
+        ) : status === "mintingFinished" ? (
+          <div className="flex justify-center items-center w-full h-full bg-white z-[5]">
+            <div className="flex flex-col justify-center items-center gap-5">
+              <h1 className="text-3xl font-bold text-center">
+                Minting succeeded!
+              </h1>
+
+              <h2>Your membership has been emailed to you!</h2>
+
+              <Link
+                href="https://help.crossmint.com/hc/en-us/articles/9612476375309-Tell-me-more-about-my-Crossmint-wallet-"
+                target="_blank"
               >
-                Sign Up
-              </button>
-
-            )}
-          </form>
-        </>
-      ) : status === "smsCapture" ? ( // Phone number capture
-        <>
-          <form
-            onSubmit={handleSumbitPhone}
-            className="flex flex-col justify-center items-center gap-5"
-          >
-            <h1
-              className={`text-3xl font-bold text-center ${titleFont.className}`}
-            >
-              Help us connect!
-            </h1>
-
-            <h2>Enter your phone number to continue</h2>
-
-            <input
-              className="w-full p-1 border-2 border-black rounded"
-              type="text"
-              name="phone"
-              placeholder="555-555-5555"
-              value={phonenumber}
-              onChange={(e) => handlePhoneInputChange(e)}
-            />
-
-            <p className="text-[.8rem]">
-              {"* Must be a valid US Phone number"}
-            </p>
-
-            <button
-              type="submit"
-              disabled={phoneError}
-              className="w-full p-1 bg-black hover:bg-black/80 disabled:bg-gray-300 border-2 border-black rounded text-white disabled:text-gray-500 transition-colors duration-300 ease-in-out"
-            >
-              Continue
-            </button>
-          </form>
-        </>
-      ) : // Payment
-      membership === "gold" ? (
-        <>
-          <div className="mx-auto">
-            <CrossmintPaymentElement
-              clientId={membership === "gold" ? goldClientId : crimsonClientId}
-              environment="staging" // "production" | "staging"
-              recipient={{
-                email: email,
-                wallet: walletAddress,
-              }}
-              currency="USD"
-              locale="en-US"
-              uiConfig={{
-                colors: {
-                  background: "#ffffff",
-                  backgroundSecondary: "#ffffff",
-                  backgroundTertiary: "#000000",
-                  textPrimary: "#000000",
-                  textSecondary: "#ffffff",
-                  accent: "#C6990B",
-                  danger: "#C63B0B",
-                  textLink: "#C6990B",
-                },
-                fontSizeBase: "1rem",
-                spacingUnit: "0.25rem",
-                borderRadius: "4px",
-                fontWeightPrimary: "500",
-                fontWeightSecondary: "500",
-              }}
-              mintConfig={{
-                type: "erc-721",
-                totalPrice: membership === "gold" ? "50" : "20",
-                _quantity: 1,
-              }}
-              // @ts-ignore
-              onEvent={onEvent}
-            />
+                Crossmint Wallet Help
+              </Link>
+            </div>
           </div>
-        </>
-      ) : (
-        <>
-          <div className="mx-auto">
-            <h1 className="text-3xl font-bold text-center">
-              Thanks for signing up!
-            </h1>
-
-            <h2 className="text-center">
-              We'll contact you when the crimson pass drops
-            </h2>
+        ) : status === "mintingFailed" ? (
+          <div className="flex justify-center items-center w-full h-full bg-white z-[5]">
+            <div className="flex flex-col justify-center items-center gap-5">
+              <h1 className="text-3xl font-bold text-center">Minting failed</h1>
+              <h2>Try again, if it fails again contact us!</h2>
+            </div>
           </div>
-        </>
-      )}
-
-      {status === "paymentProcessing" ? (
-        <div className="flex justify-center items-center absolute top-0 left-0 w-full h-full bg-white z-[5]">
-          <div className="flex flex-col justify-center items-center gap-5">
-            <h1 className="text-3xl font-bold text-center">
-              Processing your payment...
-            </h1>
-            <h2>Do not close this window</h2>
-
-            <div className="animate-spin rounded-full h-[4rem] w-[4rem] border-t-2 border-b-2 border-gray-900"></div>
+        ) : status === "soldOut" ? (
+          <div className="flex justify-center items-center w-full h-full bg-white z-[5]">
+            <div className="flex flex-col justify-center items-center gap-5">
+              <h1 className="text-3xl font-bold text-center">Sold out</h1>
+              <h2>Looks like we're sold out!</h2>
+            </div>
           </div>
-        </div>
-      ) : status === "mintingStarted" || status === "mintingSucceeded" ? (
-        <div className="flex justify-center items-center absolute top-0 left-0 w-full h-full bg-white z-[5]">
-          <div className="flex flex-col justify-center items-center gap-5">
-            <h1 className="text-3xl font-bold text-center">
-              Minting your membership...
-            </h1>
-            <h2>Do not close this window</h2>
-
-            <div className="animate-spin rounded-full h-[4rem] w-[4rem] border-t-2 border-b-2 border-gray-900"></div>
+        ) : (
+          <div className="flex justify-center items-center w-full h-full bg-white z-[5]">
+            <div className="flex flex-col justify-center items-center gap-5">
+              <h1 className="text-3xl font-bold text-center">Error</h1>
+              <h2>Something went wrong</h2>
+            </div>
           </div>
-        </div>
-      ) : status === "mintingFinished" ? (
-        <div className="flex justify-center items-center absolute top-0 left-0 w-full h-full bg-white z-[5]">
-          <div className="flex flex-col justify-center items-center gap-5">
-            <h1 className="text-3xl font-bold text-center">
-              Minting succeeded!
-            </h1>
-            <h2>Check your email for your pass</h2>
-            <p>Need help visit the following link to access your pass</p>
-            <Link
-              href="https://help.crossmint.com/hc/en-us/articles/9612476375309-Tell-me-more-about-my-Crossmint-wallet-"
-              target="_blank"
-            >
-              Crossmint Wallet Help
-            </Link>
-          </div>
-        </div>
-      ) : status === "mintingFailed" ? (
-        <div className="flex justify-center items-center absolute top-0 left-0 w-full h-full bg-white z-[5]">
-          <div className="flex flex-col justify-center items-center gap-5">
-            <h1 className="text-3xl font-bold text-center">Minting failed</h1>
-            <h2>Try again, if it fails again contact us!</h2>
-          </div>
-        </div>
-      ) : status === "soldOut" ? (
-        <div className="flex justify-center items-center absolute top-0 left-0 w-full h-full bg-white z-[5]">
-          <div className="flex flex-col justify-center items-center gap-5">
-            <h1 className="text-3xl font-bold text-center">Sold out</h1>
-            <h2>Looks like we're sold out!</h2>
-          </div>
-        </div>
-      ) : null}
-    </div>
+        )}
+      </div>
+    </>
   );
 }
