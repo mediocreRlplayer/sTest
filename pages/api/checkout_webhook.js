@@ -26,3 +26,7 @@ const checkEmail = async (data) => {
     console.log(error);
   }
 }
+
+function handler(req, res) {
+  console.log(req.body);
+}
