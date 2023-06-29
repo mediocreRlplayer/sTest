@@ -88,29 +88,31 @@ export default function Form({ membership }: { membership: string }) {
         setStatus("soldOut");
         break;
       case "payment:process.started":
+        console.log("Payment started");
         setStatus("paymentProcessing");
         break;
       case "payment:process.succeeded":
+        console.log("Payment succeeded");
         const { orderIdentifier } = event.payload;
         listenToMintingEvents({ orderIdentifier: orderIdentifier }, (event) => {
           switch (event.type) {
             case "order:process.started":
-              console.log("Minting started", event);
+              console.log("Minting started");
               setStatus("mintingStarted");
               break;
             case "order:process.finished":
-              console.log("Minting finished", event);
+              console.log("Minting finished");
               setStatus("mintingFinished");
               break;
             case "transaction:fulfillment.succeeded":
-              console.log("Minting succeeded", event);
+              console.log("Minting succeeded");
 
               // Adding the user to the correct member list
               handleUserBoughtMembership();
               setStatus("mintingSucceeded");
               break;
             case "transaction:fulfillment.failed":
-              console.log("Minting failed", event);
+              console.log("Minting failed");
               setStatus("mintingFailed");
               break;
             default:
@@ -470,224 +472,234 @@ export default function Form({ membership }: { membership: string }) {
         )}
       </div>
 
-      <div className="flex flex-col justify-center items-center h-full">
-        {loading ? (
-          <div className="flex justify-center items-center w-full h-full">
-            <div className="flex flex-col justify-center items-center gap-5">
-              <h1 className="text-3xl font-bold text-center">Loading...</h1>
-              <h2>Do not close this window</h2>
+      <div className="relative flex flex-col justify-center items-center h-full">
+        <div
+          className={`flex flex-col justify-center items-center w-full h-full min-h-[600px] bg-white ${
+            status !== "crossmintCheckout" ? "z-20" : "z-[-1]"
+          }`}
+        >
+          {loading ? (
+            <div className="flex justify-center items-center w-full h-full">
+              <div className="flex flex-col justify-center items-center gap-5">
+                <h1 className="text-3xl font-bold text-center">Loading...</h1>
+                <h2>Do not close this window</h2>
 
-              <div className="animate-spin rounded-full h-[4rem] w-[4rem] border-t-2 border-b-2 border-gray-900"></div>
-            </div>
-          </div>
-        ) : status === "crimsonSignup" ? (
-          <>
-            <div className="mx-auto">
-              <h1 className="text-3xl font-bold text-center">
-                Thanks for signing up!
-              </h1>
-
-              <h2 className="text-center">
-                We'll contact you when the crimson pass drops
-              </h2>
-            </div>
-          </>
-        ) : status === "emailCapture" ? ( // Email capture
-          <>
-            <form
-              onSubmit={handleSumbitEmail}
-              className="flex flex-col justify-center items-center gap-5 min-h-[400px]"
-            >
-              <h1
-                className={`text-3xl font-bold text-center ${titleFont.className}`}
-              >
-                Ready to become a member?
-              </h1>
-
-              <h2>Enter your email to get started</h2>
-
-              <input
-                type="text"
-                placeholder="email@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-[300px] p-1 pl-3 border-2 border-black rounded"
-              />
-
-              <div className="flex justify-center w-full ml-2">
-                <input
-                  style={{ transform: "scale(1.3)", marginRight: "1rem" }}
-                  type="checkbox"
-                  name="sms"
-                  id="sms"
-                  onChange={(e) => setEnabledSMS(e.target.checked)}
-                />
-                <label htmlFor="sms">Sign me up for SMS alerts</label>
+                <div className="animate-spin rounded-full h-[4rem] w-[4rem] border-t-2 border-b-2 border-gray-900"></div>
               </div>
+            </div>
+          ) : status === "crimsonSignup" ? (
+            <>
+              <div className="mx-auto">
+                <h1 className="text-3xl font-bold text-center">
+                  Thanks for signing up!
+                </h1>
 
-              {membership === "gold" ? (
+                <h2 className="text-center">
+                  We'll contact you when the crimson pass drops
+                </h2>
+              </div>
+            </>
+          ) : status === "emailCapture" ? ( // Email capture
+            <>
+              <form
+                onSubmit={handleSumbitEmail}
+                className="flex flex-col justify-center items-center gap-5 min-h-[400px] h-full"
+              >
+                <h1
+                  className={`text-3xl font-bold text-center ${titleFont.className}`}
+                >
+                  Ready to become a member?
+                </h1>
+
+                <h2>Enter your email to get started</h2>
+
+                <input
+                  type="text"
+                  placeholder="email@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-[300px] p-1 pl-3 border-2 border-black rounded"
+                />
+
+                <div className="flex justify-center w-full ml-2">
+                  <input
+                    style={{ transform: "scale(1.3)", marginRight: "1rem" }}
+                    type="checkbox"
+                    name="sms"
+                    id="sms"
+                    onChange={(e) => setEnabledSMS(e.target.checked)}
+                  />
+                  <label htmlFor="sms">Sign me up for SMS alerts</label>
+                </div>
+
+                {membership === "gold" ? (
+                  <button
+                    type="submit"
+                    className="w-[300px] p-1 bg-black hover:bg-black/80 disabled:bg-gray-300 border-2 border-black rounded text-white disabled:text-gray-500 transition-colors duration-300 ease-in-out"
+                  >
+                    Continue
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    className="w-[300px] p-1 bg-black hover:bg-black/80 disabled:bg-gray-300 border-2 border-black rounded text-white disabled:text-gray-500 transition-colors duration-300 ease-in-out"
+                  >
+                    Sign Up
+                  </button>
+                )}
+              </form>
+            </>
+          ) : status === "smsCapture" ? ( // Phone number capture
+            <>
+              <form
+                onSubmit={handleSumbitPhone}
+                className="flex flex-col justify-center items-center gap-5 min-h-[400px] h-full"
+              >
+                <h1
+                  className={`text-3xl font-bold text-center ${titleFont.className}`}
+                >
+                  Help us connect!
+                </h1>
+
+                <h2>Enter your phone number to continue</h2>
+
+                <input
+                  className="w-full p-1 border-2 border-black rounded"
+                  type="text"
+                  name="phone"
+                  placeholder="555-555-5555"
+                  value={phonenumber}
+                  onChange={(e) => handlePhoneInputChange(e)}
+                />
+
+                <p className="text-[.8rem]">
+                  {"* Must be a valid US Phone number"}
+                </p>
+
                 <button
                   type="submit"
+                  disabled={phoneError}
                   className="w-[300px] p-1 bg-black hover:bg-black/80 disabled:bg-gray-300 border-2 border-black rounded text-white disabled:text-gray-500 transition-colors duration-300 ease-in-out"
                 >
                   Continue
                 </button>
-              ) : (
-                <button
-                  type="submit"
-                  className="w-[300px] p-1 bg-black hover:bg-black/80 disabled:bg-gray-300 border-2 border-black rounded text-white disabled:text-gray-500 transition-colors duration-300 ease-in-out"
+              </form>
+            </>
+          ) : status === "paymentProcessing" ? (
+            <div className="flex justify-center items-center w-full h-full">
+              <div className="flex flex-col justify-center items-center gap-5 min-h-[400px] h-full">
+                <h1 className="text-3xl font-bold text-center animate-pulse">
+                  Processing your payment...
+                </h1>
+
+                <h2 className="text-red-500 font-bold text-center">
+                  Do not close this window, this can take a few minutes to
+                  complete!
+                </h2>
+
+                <div className="animate-spin rounded-full h-[2rem] w-[2rem] border-t-2 border-b-2 border-gray-900" />
+              </div>
+            </div>
+          ) : status === "mintingStarted" || status === "mintingSucceeded" ? (
+            <div className="flex justify-center items-center w-full h-full">
+              <div className="flex flex-col justify-center items-center gap-5 min-h-[400px] h-full">
+                <h1 className="text-3xl font-bold text-center">
+                  Minting your membership...
+                </h1>
+
+                <h2 className="text-red-500 font-bold text-center">
+                  Do not close this window, this can take a few minutes to
+                  complete!
+                </h2>
+
+                <div className="animate-spin rounded-full h-[2rem] w-[2rem] border-t-2 border-b-2 border-gray-900" />
+              </div>
+            </div>
+          ) : status === "mintingFinished" ? (
+            <div className="flex justify-center items-center w-full h-full min-h-[400px]">
+              <div className="flex flex-col justify-center items-center gap-5">
+                <h1 className="text-3xl font-bold text-center">
+                  Minting succeeded!
+                </h1>
+
+                <h2>Your membership has been emailed to you!</h2>
+
+                <Link
+                  href="https://help.crossmint.com/hc/en-us/articles/9612476375309-Tell-me-more-about-my-Crossmint-wallet-"
+                  target="_blank"
                 >
-                  Sign Up
-                </button>
-              )}
-            </form>
-          </>
-        ) : status === "smsCapture" ? ( // Phone number capture
-          <>
-            <form
-              onSubmit={handleSumbitPhone}
-              className="flex flex-col justify-center items-center gap-5 min-h-[400px]"
-            >
-              <h1
-                className={`text-3xl font-bold text-center ${titleFont.className}`}
-              >
-                Help us connect!
-              </h1>
-
-              <h2>Enter your phone number to continue</h2>
-
-              <input
-                className="w-full p-1 border-2 border-black rounded"
-                type="text"
-                name="phone"
-                placeholder="555-555-5555"
-                value={phonenumber}
-                onChange={(e) => handlePhoneInputChange(e)}
-              />
-
-              <p className="text-[.8rem]">
-                {"* Must be a valid US Phone number"}
-              </p>
-
-              <button
-                type="submit"
-                disabled={phoneError}
-                className="w-[300px] p-1 bg-black hover:bg-black/80 disabled:bg-gray-300 border-2 border-black rounded text-white disabled:text-gray-500 transition-colors duration-300 ease-in-out"
-              >
-                Continue
-              </button>
-            </form>
-          </>
-        ) : status === "crossmintCheckout" ? (
-          <>
-            <div className="mx-auto">
-              <CrossmintPaymentElement
-                clientId={
-                  membership === "gold" ? goldClientId : crimsonClientId
-                }
-                environment="staging" // "production" | "staging"
-                recipient={{
-                  email: email,
-                  wallet: walletAddress,
-                }}
-                currency="USD"
-                locale="en-US"
-                uiConfig={{
-                  colors: {
-                    background: "#ffffff",
-                    backgroundSecondary: "#ffffff",
-                    backgroundTertiary: "#000000",
-                    textPrimary: "#000000",
-                    textSecondary: "#ffffff",
-                    accent: "#C6990B",
-                    danger: "#C63B0B",
-                    textLink: "#C6990B",
-                  },
-                  fontSizeBase: "1rem",
-                  spacingUnit: "0.25rem",
-                  borderRadius: "4px",
-                  fontWeightPrimary: "500",
-                  fontWeightSecondary: "500",
-                }}
-                mintConfig={{
-                  type: "erc-721",
-                  totalPrice: membership === "gold" ? "50" : "20",
-                  _quantity: 1,
-                }}
-                // @ts-ignore
-                onEvent={onEvent}
-              />
+                  Crossmint Wallet Help
+                </Link>
+              </div>
             </div>
-          </>
-        ) : status === "paymentProcessing" ? (
-          <div className="flex justify-center items-center w-full h-full">
-            <div className="flex flex-col justify-center items-center gap-5 min-h-[400px]">
-              <h1 className="text-3xl font-bold text-center animate-pulse">
-                Processing your payment...
-              </h1>
-
-              <h2 className="text-red-500 font-bold text-center">
-                Do not close this window, this can take a few minutes to
-                complete!
-              </h2>
-
-              <div className="animate-spin rounded-full h-[2rem] w-[2rem] border-t-2 border-b-2 border-gray-900" />
+          ) : status === "mintingFailed" ? (
+            <div className="flex justify-center items-center w-full h-full min-h-[400px]">
+              <div className="flex flex-col justify-center items-center gap-5">
+                <h1 className="text-3xl font-bold text-center">
+                  Minting failed
+                </h1>
+                <h2>Try again, if it fails again contact us!</h2>
+              </div>
             </div>
-          </div>
-        ) : status === "mintingStarted" || status === "mintingSucceeded" ? (
-          <div className="flex justify-center items-center w-full h-full">
-            <div className="flex flex-col justify-center items-center gap-5 min-h-[400px]">
-              <h1 className="text-3xl font-bold text-center">
-                Minting your membership...
-              </h1>
+          ) : status === "soldOut" ? (
+            <div className="flex justify-center items-center w-full h-full min-h-[400px]">
+              <div className="flex flex-col justify-center items-center gap-5">
+                <h1 className="text-3xl font-bold text-center">Sold out</h1>
+                <h2>Looks like we're sold out!</h2>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-center items-center w-full h-full min-h-[400px]">
+              <div className="flex flex-col justify-center items-center gap-5">
+                <h1 className="text-3xl font-bold text-center">Error</h1>
+                <h2>Something went wrong</h2>
+              </div>
+            </div>
+          )}
+        </div>
 
-              <h2 className="text-red-500 font-bold text-center">
-                Do not close this window, this can take a few minutes to
-                complete!
-              </h2>
-
-              <div className="animate-spin rounded-full h-[2rem] w-[2rem] border-t-2 border-b-2 border-gray-900" />
-            </div>
-          </div>
-        ) : status === "mintingFinished" ? (
-          <div className="flex justify-center items-center w-full h-full bg-white z-[5]">
-            <div className="flex flex-col justify-center items-center gap-5">
-              <h1 className="text-3xl font-bold text-center">
-                Minting succeeded!
-              </h1>
-
-              <h2>Your membership has been emailed to you!</h2>
-
-              <Link
-                href="https://help.crossmint.com/hc/en-us/articles/9612476375309-Tell-me-more-about-my-Crossmint-wallet-"
-                target="_blank"
-              >
-                Crossmint Wallet Help
-              </Link>
-            </div>
-          </div>
-        ) : status === "mintingFailed" ? (
-          <div className="flex justify-center items-center w-full h-full bg-white z-[5]">
-            <div className="flex flex-col justify-center items-center gap-5">
-              <h1 className="text-3xl font-bold text-center">Minting failed</h1>
-              <h2>Try again, if it fails again contact us!</h2>
-            </div>
-          </div>
-        ) : status === "soldOut" ? (
-          <div className="flex justify-center items-center w-full h-full bg-white z-[5]">
-            <div className="flex flex-col justify-center items-center gap-5">
-              <h1 className="text-3xl font-bold text-center">Sold out</h1>
-              <h2>Looks like we're sold out!</h2>
-            </div>
-          </div>
-        ) : (
-          <div className="flex justify-center items-center w-full h-full bg-white z-[5]">
-            <div className="flex flex-col justify-center items-center gap-5">
-              <h1 className="text-3xl font-bold text-center">Error</h1>
-              <h2>Something went wrong</h2>
-            </div>
-          </div>
-        )}
+        <div
+          className={`${
+            membership !== "gold" ? "hidden" : "flex"
+          } justify-center items-center w-[300px] absolute ${
+            status === "crossmintCheckout" ? "z-20" : "z-[-1]"
+          }`}
+        >
+          <CrossmintPaymentElement
+            clientId={membership === "gold" ? goldClientId : crimsonClientId}
+            environment="staging" // "production" | "staging"
+            recipient={{
+              email: email,
+              wallet: walletAddress,
+            }}
+            currency="USD"
+            locale="en-US"
+            uiConfig={{
+              colors: {
+                background: "#ffffff",
+                backgroundSecondary: "#ffffff",
+                backgroundTertiary: "#000000",
+                textPrimary: "#000000",
+                textSecondary: "#ffffff",
+                accent: "#C6990B",
+                danger: "#C63B0B",
+                textLink: "#C6990B",
+              },
+              fontSizeBase: "1rem",
+              spacingUnit: "0.25rem",
+              borderRadius: "4px",
+              fontWeightPrimary: "500",
+              fontWeightSecondary: "500",
+            }}
+            mintConfig={{
+              type: "erc-721",
+              totalPrice: membership === "gold" ? "50" : "20",
+              _quantity: 1,
+            }}
+            // @ts-ignore
+            onEvent={onEvent}
+          />
+        </div>
       </div>
     </>
   );
