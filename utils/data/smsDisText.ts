@@ -1,0 +1,2 @@
+export const smsDisclosure =
+  "* By submitting this form and signing up for texts, you consent to receive marketing text messages (e.g. promos, cart reminders) from Sponsorless at the number provided, including messages sent by autodialer. Consent is not a condition of purchase. Msg & data rates may apply. Msg frequency varies. Unsubscribe at any time by replying STOP or clicking the unsubscribe link (where available). Privacy Policy & Terms.";
