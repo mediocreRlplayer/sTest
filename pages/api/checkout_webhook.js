@@ -27,6 +27,10 @@ const checkEmail = async (data) => {
   }
 }
 
-function handler(req, res) {
-  console.log(req.body);
+export default async function handler(req, res) {
+  if (req.method === 'POST') {
+    // Extract the payload or data from the request
+    const data = req.body;
+    console.log(data);
+  }
 }
